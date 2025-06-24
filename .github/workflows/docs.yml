@@ -1,0 +1,77 @@
+name: docs
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+concurrency:
+  group: docs-deploy
+
+env:
+  FORCE_COLOR: "1"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Fetch all history for applying timestamps to every page
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: pyproject.toml
+
+    - name: Install Hatch
+      uses: pypa/hatch@install
+
+    - name: Configure Git for GitHub Actions bot
+      run: |
+        git config --local user.name 'github-actions[bot]'
+        git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Check documentation
+      run: hatch run docs:build-check
+
+    - name: Build documentation
+      run: hatch run docs:build
+
+    - name: Create archive
+      run: tar -czf site.tar.gz site
+
+    - name: Upload site
+      uses: actions/upload-artifact@v4
+      with:
+        name: site
+        path: site.tar.gz
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: site
+
+    - name: Unpack archive
+      run: tar -xzf site.tar.gz
+
+    - uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: site
+        commit_message: ${{ github.event.head_commit.message }}
