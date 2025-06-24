@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class ClickCommandOption:
-    __slots__ = ("__description", "__flag", "__multiple", "__required", "__type")
+    __slots__ = ("__container", "__description", "__flag", "__flag_name", "__multiple", "__required", "__type")
 
     def __init__(
         self,
@@ -22,13 +22,17 @@ class ClickCommandOption:
         required: bool,
         description: str,
         multiple: bool,
-        flag: str = "",
+        container: bool = False,
+        flag: bool = False,
+        flag_name: str = "",
     ) -> None:
         self.__type = type
         self.__required = required
         self.__description = description
         self.__multiple = multiple
+        self.__container = container
         self.__flag = flag
+        self.__flag_name = flag_name
 
     @property
     def type(self) -> Literal["argument", "option"]:
@@ -47,8 +51,16 @@ class ClickCommandOption:
         return self.__multiple
 
     @property
-    def flag(self) -> str:
+    def container(self) -> bool:
+        return self.__container
+
+    @property
+    def flag(self) -> bool:
         return self.__flag
+
+    @property
+    def flag_name(self) -> str:
+        return self.__flag_name
 
 
 class ClickCommandMetadata:
@@ -84,16 +96,25 @@ class ClickCommandMetadata:
                         args.extend(value)
                     else:
                         args.append(value)
-                elif option.type == "option":
-                    if isinstance(value, bool):
-                        if value:
-                            flags.append(option.flag)
-                        continue
-                    if isinstance(value, list):
+
+                    continue
+
+                if option.flag:
+                    if value:
+                        flags.append(option.flag_name)
+                elif option.multiple:
+                    if option.container:
                         for v in value:
-                            opts.extend((option.flag, v))
+                            opts.append(option.flag_name)
+                            opts.extend(v)
                     else:
-                        opts.extend((option.flag, value))
+                        for v in value:
+                            opts.extend((option.flag_name, v))
+                elif option.container:
+                    opts.append(option.flag_name)
+                    opts.extend(value)
+                else:
+                    opts.extend((option.flag_name, value))
 
             command.extend(flags)
             command.extend(map(str, opts))
@@ -128,10 +149,12 @@ def walk_command_tree(
 def walk_commands(
     command: click.Command,
     *,
+    name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,
+    strict_types: bool = False,
 ) -> Iterator[ClickCommandMetadata]:
-    for ctx in walk_command_tree(command, name=command.name):
+    for ctx in walk_command_tree(command, name=name or command.name):
         subcommand_path = " ".join(ctx.command_path.split()[1:])
         if exclude is not None and re.search(exclude, subcommand_path):
             continue
@@ -147,56 +170,71 @@ def walk_commands(
                 continue
 
             # Get the longest flag
-            flag = sorted(flags, key=len)[-1]  # noqa: FURB192
-            option_name = flag.lstrip("-").replace("-", "_")
+            flag_name = sorted(flags, key=len)[-1]  # noqa: FURB192
+            option_name = flag_name.lstrip("-").replace("-", "_")
+
+            option_data = {
+                "type": info["param_type_name"],
+                "required": info["required"],
+                "multiple": info["multiple"],
+            }
+            if info["param_type_name"] == "option":
+                option_data["flag_name"] = flag_name
 
             prop = {"title": option_name}
             if help_text := (info.get("help") or "").strip():
                 prop["description"] = help_text
 
             type_data = info["type"]
-            type_name = type_data["name"]
-            if type_name == "boolean":
-                prop["type"] = "boolean"
-            elif type_name == "text":
+            type_name = type_data["param_type"]
+
+            # Some types are just strings
+            if type_name in {"Path", "File"}:
+                type_name = "String"
+
+            if type_name == "String":
                 if info["nargs"] == -1 or info["multiple"]:
                     prop["type"] = "array"
                     prop["items"] = {"type": "string"}
                 else:
                     prop["type"] = "string"
-            elif type_name == "integer":
+            elif type_name == "Bool":
+                option_data["flag"] = True
+                prop["type"] = "boolean"
+            elif type_name == "Int":
                 if info["multiple"]:
                     prop["type"] = "array"
                     prop["items"] = {"type": "integer"}
                 else:
                     prop["type"] = "integer"
-            elif type_name == "float":
+            elif type_name == "Float":
                 if info["multiple"]:
                     prop["type"] = "array"
                     prop["items"] = {"type": "number"}
                 else:
                     prop["type"] = "number"
-            elif type_name == "choice":
+            elif type_name == "Choice":
                 prop["type"] = "string"
                 prop["enum"] = list(type_data["choices"])
-            else:
-                msg = f"Unknown type: {type_name}"
+            elif type_name == "Tuple":
+                option_data["container"] = True
+                if info["multiple"]:
+                    prop["type"] = "array"
+                    prop["items"] = {"type": "array", "items": {"type": "string"}}
+                else:
+                    prop["type"] = "array"
+                    prop["items"] = {"type": "string"}
+            elif strict_types:
+                msg = f"Unknown type: {type_data}\n{info}"
                 raise ValueError(msg)
+            else:
+                prop["type"] = "string"
 
             if not info["required"]:
-                prop["default"] = info["default"]
+                prop["default"] = None if callable(info["default"]) else info["default"]
 
             properties[option_name] = prop
-
-            option_data = {
-                "type": info["param_type_name"],
-                "required": info["required"],
-                "description": prop.get("description", ""),
-                "multiple": info["multiple"],
-            }
-            if info["param_type_name"] == "option":
-                option_data["flag"] = flag
-
+            option_data["description"] = prop.get("description", "")
             options[option_name] = ClickCommandOption(**option_data)
 
         schema = {

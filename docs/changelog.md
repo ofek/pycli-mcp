@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+***Added:***
+
+- Add support for customizing the root command name
+- Add support for more option types
+- Add support for strict type checking
+
+***Fixed:***
+
+- Fix options with dynamic default values
+- The CLI now errors for specs that don't refer to a Click command object
+
 ## 0.0.1 - 2025-06-24
 
 This is the initial public release.

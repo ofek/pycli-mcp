@@ -169,6 +169,60 @@ def test_choice() -> None:
     assert sorted(metadata.options) == ["foo"]
 
 
+def test_path() -> None:
+    @click.command()
+    @click.option("--foo", type=click.Path(), help="foo help")
+    def cli(*, foo: str | None) -> None:
+        pass
+
+    commands = list(walk_commands(cli))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "foo": {
+                "default": None,
+                "description": "foo help",
+                "title": "foo",
+                "type": "string",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+    assert sorted(metadata.options) == ["foo"]
+
+
+def test_file() -> None:
+    @click.command()
+    @click.option("--foo", type=click.File(), help="foo help")
+    def cli(*, foo: str | None) -> None:
+        pass
+
+    commands = list(walk_commands(cli))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "foo": {
+                "default": None,
+                "description": "foo help",
+                "title": "foo",
+                "type": "string",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+    assert sorted(metadata.options) == ["foo"]
+
+
 def test_multiple_allowed() -> None:
     @click.command()
     @click.option("--foo", multiple=True, help="foo help")
@@ -211,6 +265,62 @@ def test_multiple_allowed() -> None:
         "type": "object",
     }
     assert sorted(metadata.options) == ["bar", "baz", "foo"]
+
+
+def test_container() -> None:
+    @click.command()
+    @click.option("--foo", type=(str, str), help="foo help")
+    def cli(*, foo: tuple[str, str] | None) -> None:
+        pass
+
+    commands = list(walk_commands(cli))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "foo": {
+                "default": None,
+                "description": "foo help",
+                "title": "foo",
+                "type": "array",
+                "items": {"type": "string"},
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+    assert sorted(metadata.options) == ["foo"]
+
+
+def test_multi_container() -> None:
+    @click.command()
+    @click.option("--foo", type=(str, str), multiple=True, help="foo help")
+    def cli(*, foo: tuple[tuple[str, str], ...] | None) -> None:
+        pass
+
+    commands = list(walk_commands(cli))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "foo": {
+                "default": None,
+                "description": "foo help",
+                "title": "foo",
+                "type": "array",
+                "items": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+    assert sorted(metadata.options) == ["foo"]
 
 
 def test_required_option() -> None:

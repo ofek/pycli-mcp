@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 class ClickCommandQuery:
     """
-    A wrapper around a root Click command that supports filtering subcommands. Example usage:
+    A wrapper around a root Click command that influences the collection behavior. Example usage:
 
     ```python
     from click_mcp_server import ClickCommandQuery, ClickMCPServer
@@ -49,25 +49,37 @@ class ClickCommandQuery:
 
     Parameters:
         command: The Click command to query.
+        name: The expected name of the root command.
         include: A regular expression to include in the query.
         exclude: A regular expression to exclude in the query.
+        strict_types: Whether to error on unknown types.
     """
 
-    __slots__ = ("__command", "__exclude", "__include")
+    __slots__ = ("__command", "__exclude", "__include", "__name", "__strict_types")
 
     def __init__(
         self,
         command: click.Command,
         *,
+        name: str | None = None,
         include: str | re.Pattern | None = None,
         exclude: str | re.Pattern | None = None,
+        strict_types: bool = False,
     ) -> None:
         self.__command = command
+        self.__name = name
         self.__include = include
         self.__exclude = exclude
+        self.__strict_types = strict_types
 
     def __iter__(self) -> Iterator[ClickCommandMetadata]:
-        yield from walk_commands(self.__command, include=self.__include, exclude=self.__exclude)
+        yield from walk_commands(
+            self.__command,
+            name=self.__name,
+            include=self.__include,
+            exclude=self.__exclude,
+            strict_types=self.__strict_types,
+        )
 
 
 class ClickCommand:
