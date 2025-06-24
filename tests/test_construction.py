@@ -43,6 +43,8 @@ def test_options() -> None:
     @click.option("--flag", "-f", is_flag=True)
     @click.option("--choice", "-c", type=click.Choice(["bar", "baz"]))
     @click.option("--multiple", "-m", multiple=True)
+    @click.option("--container", "-t", type=(str, str))
+    @click.option("--multi-container", "-mt", type=(str, str), multiple=True)
     @click.option("--unused-option", "-u")
     def cli(
         *,
@@ -52,6 +54,8 @@ def test_options() -> None:
         flag: bool,
         choice: str | None,
         multiple: tuple[str, ...] | None,
+        container: tuple[str, str] | None,
+        multi_container: tuple[tuple[str, str], ...] | None,
         unused_option: str | None,
     ) -> None:
         pass
@@ -67,6 +71,8 @@ def test_options() -> None:
         "flag": True,
         "choice": "bar",
         "multiple": ["m2", "m1"],
+        "container": ["t2", "t1"],
+        "multi_container": [["mc2", "mc1"], ["mc4", "mc3"]],
     }) == [
         "cli",
         "--flag",
@@ -82,6 +88,15 @@ def test_options() -> None:
         "m2",
         "--multiple",
         "m1",
+        "--container",
+        "t2",
+        "t1",
+        "--multi-container",
+        "mc2",
+        "mc1",
+        "--multi-container",
+        "mc4",
+        "mc3",
     ]
 
 
