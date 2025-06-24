@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://ofek.dev/click-mcp-server/</loc>
+         <lastmod>2020-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://ofek.dev/click-mcp-server/api/</loc>
+         <lastmod>2020-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://ofek.dev/click-mcp-server/changelog/</loc>
+         <lastmod>2020-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://ofek.dev/click-mcp-server/cli/</loc>
+         <lastmod>2020-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://ofek.dev/click-mcp-server/install/</loc>
+         <lastmod>2020-02-02</lastmod>
+    </url>
+</urlset>
