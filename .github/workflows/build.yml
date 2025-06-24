@@ -35,7 +35,7 @@ jobs:
         python-version-file: pyproject.toml
 
     - name: Install UV
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v6
 
     - name: Build wheel and source distribution
       run: uv build
