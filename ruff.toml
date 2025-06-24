@@ -1,0 +1,11 @@
+extend = "ruff_defaults.toml"
+
+[format]
+preview = true
+
+[lint]
+preview = true
+
+[lint.extend-per-file-ignores]
+"docs/.hooks/**/*" = ["INP001"]
+"src/click_mcp_server/cli.py" = ["T201"]
