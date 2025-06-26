@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+***Changed:***
+
+- The default aggregation level is now `root`
+
+***Added:***
+
+- Add support for controlling the level of command aggregation
+- Increase verbosity of the CLI
+
+***Fixed:***
+
+- Server errors now properly return the content of the command's `stderr`
+
 ## 0.0.2 - 2025-06-24
 
 ***Added:***

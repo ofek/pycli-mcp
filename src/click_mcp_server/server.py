@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from contextlib import asynccontextmanager
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import uvicorn
 from mcp.server.lowlevel import Server
@@ -49,24 +49,27 @@ class ClickCommandQuery:
 
     Parameters:
         command: The Click command to query.
+        aggregate: The level of aggregation to use.
         name: The expected name of the root command.
         include: A regular expression to include in the query.
         exclude: A regular expression to exclude in the query.
         strict_types: Whether to error on unknown types.
     """
 
-    __slots__ = ("__command", "__exclude", "__include", "__name", "__strict_types")
+    __slots__ = ("__aggregate", "__command", "__exclude", "__include", "__name", "__strict_types")
 
     def __init__(
         self,
         command: click.Command,
         *,
+        aggregate: Literal["none", "group", "root"] | None = None,
         name: str | None = None,
         include: str | re.Pattern | None = None,
         exclude: str | re.Pattern | None = None,
         strict_types: bool = False,
     ) -> None:
         self.__command = command
+        self.__aggregate = aggregate or "root"
         self.__name = name
         self.__include = include
         self.__exclude = exclude
@@ -75,6 +78,7 @@ class ClickCommandQuery:
     def __iter__(self) -> Iterator[ClickCommandMetadata]:
         yield from walk_commands(
             self.__command,
+            aggregate=self.__aggregate,
             name=self.__name,
             include=self.__include,
             exclude=self.__exclude,
@@ -224,7 +228,12 @@ class ClickMCPServer:
         """
         command = self.commands[req.params.name].metadata.construct(req.params.arguments)
         try:
-            process = subprocess.run(command, encoding="utf-8", capture_output=True)  # noqa: PLW1510
+            process = subprocess.run(  # noqa: PLW1510
+                command,
+                encoding="utf-8",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
         # This can happen if the command is not found
         except subprocess.CalledProcessError as e:
             return ServerResult(CallToolResult(content=[TextContent(type="text", text=str(e))], isError=True))

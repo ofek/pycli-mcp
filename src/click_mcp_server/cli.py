@@ -41,25 +41,36 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
 )
 @click.argument("specs", nargs=-1)
 @click.option(
+    "--aggregate",
+    "-a",
+    "aggregations",
+    type=click.Choice(["root", "group", "none"]),
+    multiple=True,
+    help=(
+        "The level of aggregation to use, with less improving type information at the expense "
+        "of more tools (default: root). Multiple specs make the format: spec=aggregation"
+    ),
+)
+@click.option(
     "--name",
     "-n",
     "names",
     multiple=True,
-    help="The expected name of the exposed command, multiple specs make the format: spec=name",
+    help="The expected name of the exposed command. Multiple specs make the format: spec=name",
 )
 @click.option(
     "--include",
     "-i",
     "includes",
     multiple=True,
-    help="The regular expression filter to include subcommands, multiple specs make the format: spec=regex",
+    help="The regular expression filter to include subcommands. Multiple specs make the format: spec=regex",
 )
 @click.option(
     "--exclude",
     "-e",
     "excludes",
     multiple=True,
-    help="The regular expression filter to exclude subcommands, multiple specs make the format: spec=regex",
+    help="The regular expression filter to exclude subcommands. Multiple specs make the format: spec=regex",
 )
 @click.option("--strict-types", is_flag=True, help="Error on unknown types")
 @click.option("--debug", is_flag=True, help="Enable debug mode")
@@ -80,6 +91,7 @@ def click_mcp_server(
     ctx: click.Context,
     *,
     specs: tuple[str, ...],
+    aggregations: tuple[str, ...],
     names: tuple[str, ...],
     includes: tuple[str, ...],
     excludes: tuple[str, ...],
@@ -122,6 +134,10 @@ def click_mcp_server(
     # Deduplicate
     command_specs: dict[str, dict[str, Any]] = {spec: {} for spec in dict.fromkeys(specs)}
 
+    for aggregation_entry in aggregations:
+        target_spec, aggregation = parse_target_option(command_specs, aggregation_entry)
+        command_specs[target_spec]["aggregate"] = aggregation
+
     for name_entry in names:
         target_spec, name = parse_target_option(command_specs, name_entry)
         command_specs[target_spec]["name"] = name
@@ -152,6 +168,7 @@ def click_mcp_server(
 
         command_query = ClickCommandQuery(
             obj,
+            aggregate=data.get("aggregate"),
             name=data.get("name"),
             include=data.get("include"),
             exclude=data.get("exclude"),
@@ -165,6 +182,10 @@ def click_mcp_server(
 
     server = ClickMCPServer(command_queries, stateless=True, **app_settings)
     if debug:
+        from pprint import pprint
+
+        pprint({c.metadata.path: c.metadata.schema for c in server.commands.values()})
+    else:
         for command in server.commands.values():
             print(f"Serving: {command.metadata.path}")
 

@@ -12,7 +12,7 @@ def test_no_commands() -> None:
     def cli() -> None:
         pass
 
-    assert not list(walk_commands(cli))
+    assert not list(walk_commands(cli, aggregate="none"))
 
 
 def test_root_command() -> None:
@@ -27,7 +27,7 @@ def test_root_command() -> None:
         """
         # fmt: on
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -58,7 +58,7 @@ def test_nested_commands() -> None:
     def subc_2() -> None:
         pass
 
-    commands = sorted(walk_commands(cli), key=lambda m: m.path)
+    commands = sorted(walk_commands(cli, aggregate="none"), key=lambda m: m.path)
     assert len(commands) == 2, commands
 
     metadata1 = commands[0]
@@ -99,7 +99,7 @@ def test_name_overrides() -> None:
     def subc_2() -> None:
         pass
 
-    commands = sorted(walk_commands(cli), key=lambda m: m.path)
+    commands = sorted(walk_commands(cli, aggregate="none"), key=lambda m: m.path)
     assert len(commands) == 2, commands
 
     metadata1 = commands[0]
@@ -140,7 +140,7 @@ def test_hidden_command() -> None:
     def subc_2() -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -171,7 +171,7 @@ def test_hidden_group() -> None:
     def subc_2() -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -202,7 +202,7 @@ def test_include_filter() -> None:
     def subc_2() -> None:
         pass
 
-    commands = list(walk_commands(cli, include=r"^subc-1$"))
+    commands = list(walk_commands(cli, aggregate="none", include=r"^subc-1$"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -233,7 +233,7 @@ def test_exclude_filter() -> None:
     def subc_2() -> None:
         pass
 
-    commands = list(walk_commands(cli, exclude=r"^subg-1"))
+    commands = list(walk_commands(cli, aggregate="none", exclude=r"^subg-1"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -264,4 +264,252 @@ def test_exclude_filter_override() -> None:
     def subc_2() -> None:
         pass
 
-    assert not list(walk_commands(cli, include=r"^subc-1$", exclude=r"^subc-1"))
+    assert not list(walk_commands(cli, aggregate="none", include=r"^subc-1$", exclude=r"^subc-1"))
+
+
+def test_aggregate_group() -> None:
+    @click.group()
+    def cli() -> None:
+        pass
+
+    @cli.command()
+    @click.option("--foo", help="foo help")
+    @click.option("--bar", help="bar\n\nhelp")
+    @click.option("--baz", help="baz help")
+    def subc_1(*, foo: str | None, bar: str | None, baz: str | None) -> None:
+        pass
+
+    @cli.group()
+    def subg_1() -> None:
+        pass
+
+    @subg_1.command()
+    def subc_2() -> None:
+        pass
+
+    commands = list(walk_commands(cli, aggregate="group"))
+    assert len(commands) == 2, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": """\
+Usage: cli SUBCOMMAND [ARGS]...
+
+# Available subcommands
+
+## subc-1
+
+Usage: cli subc-1 [OPTIONS]
+
+Options:
+--foo TEXT  foo help
+--bar TEXT  bar
+
+            help
+--baz TEXT  baz help
+""",
+        "properties": {
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "title": "args",
+                "description": "The arguments to pass to the subcommand",
+            },
+            "subcommand": {
+                "type": "string",
+                "enum": ["subc-1"],
+                "title": "subcommand",
+                "description": "The subcommand to execute",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+
+    metadata = commands[1]
+    assert metadata.path == "cli subg-1"
+    assert metadata.schema == {
+        "description": """\
+Usage: cli subg-1 SUBCOMMAND [ARGS]...
+
+# Available subcommands
+
+## subc-2
+
+Usage: cli subg-1 subc-2 [OPTIONS]
+""",
+        "properties": {
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "title": "args",
+                "description": "The arguments to pass to the subcommand",
+            },
+            "subcommand": {
+                "type": "string",
+                "enum": ["subc-2"],
+                "title": "subcommand",
+                "description": "The subcommand to execute",
+            },
+        },
+        "title": "cli subg-1",
+        "type": "object",
+    }
+
+
+def test_aggregate_group_only_root_command() -> None:
+    @click.command()
+    @click.option("--foo", help="foo help")
+    @click.option("--bar", help="bar\n\nhelp")
+    @click.option("--baz", help="baz help")
+    def cli(*, foo: str | None, bar: str | None, baz: str | None) -> None:
+        """
+        foo bar baz
+        """
+
+    commands = list(walk_commands(cli, aggregate="group"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": """\
+Usage: cli [OPTIONS]
+
+foo bar baz
+
+Options:
+--foo TEXT  foo help
+--bar TEXT  bar
+
+            help
+--baz TEXT  baz help
+""",
+        "properties": {
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "title": "args",
+                "description": "The arguments to pass to the command",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+
+
+def test_aggregate_root() -> None:
+    @click.group()
+    @click.option("--verbose", "-v", count=True, help="verbose help")
+    def cli(*, verbose: int) -> None:
+        pass
+
+    @cli.command()
+    @click.option("--foo", help="foo help")
+    @click.option("--bar", help="bar\n\nhelp")
+    @click.option("--baz", help="baz help")
+    def subc_1(*, foo: str | None, bar: str | None, baz: str | None) -> None:
+        pass
+
+    @cli.group()
+    def subg_1() -> None:
+        pass
+
+    @subg_1.command()
+    def subc_2() -> None:
+        pass
+
+    commands = list(walk_commands(cli, aggregate="root"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": """\
+# cli
+
+Usage: cli [OPTIONS] SUBCOMMAND [ARGS]...
+
+Options:
+-v, --verbose  verbose help
+
+## cli subc-1
+
+Usage: cli subc-1 [OPTIONS]
+
+Options:
+--foo TEXT  foo help
+--bar TEXT  bar
+
+            help
+--baz TEXT  baz help
+
+## cli subg-1 subc-2
+
+Usage: cli subg-1 subc-2 [OPTIONS]
+""",
+        "properties": {
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "title": "args",
+                "description": "The arguments to pass to the root command",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+
+
+def test_aggregate_root_no_subcommands() -> None:
+    @click.command()
+    @click.option("--foo", help="foo help")
+    @click.option("--bar", help="bar\n\nhelp")
+    @click.option("--baz", help="baz help")
+    def cli(*, foo: str | None, bar: str | None, baz: str | None) -> None:
+        """
+        foo bar baz
+        """
+
+    commands = list(walk_commands(cli, aggregate="root"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": """\
+## cli
+
+Usage: cli [OPTIONS]
+
+foo bar baz
+
+Options:
+--foo TEXT  foo help
+--bar TEXT  bar
+
+            help
+--baz TEXT  baz help
+""",
+        "properties": {
+            "args": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                },
+                "title": "args",
+                "description": "The arguments to pass to the root command",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
