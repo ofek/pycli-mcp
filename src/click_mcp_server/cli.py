@@ -77,7 +77,7 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
 @click.option("--host", help="The host used to run the server (default: 127.0.0.1)")
 @click.option("--port", type=int, help="The port used to run the server (default: 8000)")
 @click.option("--log-level", help="The log level used to run the server (default: info)")
-@click.option("--log-config", help="The path to a file passed to the `logging.config.fileConfig` function")
+@click.option("--log-config", help="The path to a file passed to the [`logging.config.fileConfig`][] function")
 @click.option(
     "--option",
     "-o",
