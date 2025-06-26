@@ -12,7 +12,7 @@ def test_root_no_options() -> None:
     def cli() -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -28,7 +28,7 @@ def test_nested_no_options() -> None:
     def sub() -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -60,7 +60,7 @@ def test_options() -> None:
     ) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -107,7 +107,7 @@ def test_arguments() -> None:
     def cli(*, arg: str, args: tuple[str, ...] | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -124,7 +124,7 @@ def test_placement() -> None:
     def cli(*, args: tuple[str, ...], option: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]

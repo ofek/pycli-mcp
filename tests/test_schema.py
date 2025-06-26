@@ -13,7 +13,7 @@ def test_no_help_text() -> None:
     def cli(*, foo: bool) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -39,7 +39,7 @@ def test_boolean() -> None:
     def cli(*, foo: bool) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -66,7 +66,7 @@ def test_string() -> None:
     def cli(*, foo: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -93,7 +93,7 @@ def test_integer() -> None:
     def cli(*, foo: int | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -120,7 +120,7 @@ def test_float() -> None:
     def cli(*, foo: float | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -147,7 +147,7 @@ def test_choice() -> None:
     def cli(*, foo: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -175,7 +175,7 @@ def test_path() -> None:
     def cli(*, foo: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -202,7 +202,7 @@ def test_file() -> None:
     def cli(*, foo: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -231,7 +231,7 @@ def test_multiple_allowed() -> None:
     def cli(*, foo: tuple[str, ...] | None, bar: tuple[int, ...] | None, baz: tuple[float, ...] | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -273,7 +273,7 @@ def test_container() -> None:
     def cli(*, foo: tuple[str, str] | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -301,7 +301,7 @@ def test_multi_container() -> None:
     def cli(*, foo: tuple[tuple[str, str], ...] | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -329,7 +329,7 @@ def test_required_option() -> None:
     def cli(*, foo: str) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -356,7 +356,7 @@ def test_argument() -> None:
     def cli(*, arg: str) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -382,7 +382,7 @@ def test_optional_argument() -> None:
     def cli(*, arg: str | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -408,7 +408,7 @@ def test_arbitrary_arguments() -> None:
     def cli(*, args: tuple[str, ...] | None) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]
@@ -435,7 +435,7 @@ def test_arbitrary_arguments_required() -> None:
     def cli(*, args: tuple[str, ...]) -> None:
         pass
 
-    commands = list(walk_commands(cli))
+    commands = list(walk_commands(cli, aggregate="none"))
     assert len(commands) == 1, commands
 
     metadata = commands[0]

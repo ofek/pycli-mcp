@@ -5,7 +5,11 @@ preview = true
 
 [lint]
 preview = true
+ignore = [
+  # Allow lazy imports to minimize memory usage
+  "PLC0415",
+]
 
 [lint.extend-per-file-ignores]
 "docs/.hooks/**/*" = ["INP001"]
-"src/click_mcp_server/cli.py" = ["T201"]
+"src/click_mcp_server/cli.py" = ["T201", "T203"]
