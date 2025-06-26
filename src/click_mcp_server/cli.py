@@ -56,7 +56,10 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
     "-n",
     "names",
     multiple=True,
-    help="The expected name of the exposed command. Multiple specs make the format: spec=name",
+    help=(
+        "The expected name of the executable, overriding the default (name of the callback). "
+        "Multiple specs make the format: spec=name"
+    ),
 )
 @click.option(
     "--include",
