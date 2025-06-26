@@ -62,7 +62,7 @@ class ClickCommandQuery:
         self,
         command: click.Command,
         *,
-        aggregate: Literal["none", "group", "root"] | None = None,
+        aggregate: Literal["root", "group", "none"] | None = None,
         name: str | None = None,
         include: str | re.Pattern | None = None,
         exclude: str | re.Pattern | None = None,

@@ -56,7 +56,10 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
     "-n",
     "names",
     multiple=True,
-    help="The expected name of the exposed command. Multiple specs make the format: spec=name",
+    help=(
+        "The expected name of the executable, overriding the default (name of the callback). "
+        "Multiple specs make the format: spec=name"
+    ),
 )
 @click.option(
     "--include",
@@ -77,7 +80,7 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
 @click.option("--host", help="The host used to run the server (default: 127.0.0.1)")
 @click.option("--port", type=int, help="The port used to run the server (default: 8000)")
 @click.option("--log-level", help="The log level used to run the server (default: info)")
-@click.option("--log-config", help="The path to a file passed to the `logging.config.fileConfig` function")
+@click.option("--log-config", help="The path to a file passed to the [`logging.config.fileConfig`][] function")
 @click.option(
     "--option",
     "-o",
