@@ -253,7 +253,7 @@ def walk_commands_no_aggregation(
                     prop["items"] = {"type": "number"}
                 else:
                     prop["type"] = "number"
-            elif type_name == "Choice":
+            elif type_name in {"Choice", "TyperChoice"}:
                 prop["type"] = "string"
                 prop["enum"] = list(type_data["choices"])
             elif type_name == "Tuple":

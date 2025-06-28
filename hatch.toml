@@ -8,15 +8,18 @@ dependencies = ["ruff==0.9.9"]
 [envs.hatch-test]
 extra-dependencies = [
   "click",
+  "typer",
 ]
 
 [envs.types]
 extra-dependencies = [
+  "click",
   "mypy",
   "pytest",
+  "typer",
 ]
 [envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/pycli_mcp tests}"
+check = "mypy {args:src/pycli_mcp tests}"
 
 [envs.docs]
 dependencies = [
