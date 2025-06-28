@@ -2,8 +2,8 @@
 
 -----
 
-::: click_mcp_server.server.ClickMCPServer
+::: pycli_mcp.server.CommandMCPServer
 
-::: click_mcp_server.server.ClickCommandQuery
+::: pycli_mcp.metadata.query.CommandQuery
     options:
       show_source: false

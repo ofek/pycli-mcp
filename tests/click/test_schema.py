@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from click_mcp_server.metadata import walk_commands
+from pycli_mcp.metadata.types.click import walk_commands
 
 
 def test_no_help_text() -> None:

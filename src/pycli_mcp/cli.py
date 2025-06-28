@@ -9,7 +9,7 @@ from typing import Any
 
 import click
 
-from click_mcp_server import ClickCommandQuery, ClickMCPServer
+from pycli_mcp import CommandMCPServer, CommandQuery
 
 
 def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str]:
@@ -90,7 +90,7 @@ def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str
     help="Arbitrary server options (multiple allowed) e.g. -o key1 value1 -o key2 value2",
 )
 @click.pass_context
-def click_mcp_server(
+def pycli_mcp(
     ctx: click.Context,
     *,
     specs: tuple[str, ...],
@@ -108,18 +108,19 @@ def click_mcp_server(
 ) -> None:
     """
     \b
-     _______ _  _       _        _______ _______ ______      ______
-    (_______) |(_)     | |      (_______|_______|_____ \\    / _____)
-     _      | | _  ____| |  _    _  _  _ _       _____) )  ( (____  _____  ____ _   _ _____  ____
-    | |     | || |/ ___) |_/ )  | ||_|| | |     |  ____/    \\____ \\| ___ |/ ___) | | | ___ |/ ___)
-    | |_____| || ( (___|  _ (   | |   | | |_____| |         _____) ) ____| |    \\ V /| ____| |
-     \\______)\\_)_|\\____)_| \\_)  |_|   |_|\\______)_|        (______/|_____)_|     \\_/ |_____)_|
+     ______       _______ _       _    _______ _______ ______
+    (_____ \\     (_______|_)     | |  (_______|_______|_____ \\
+     _____) )   _ _       _      | |   _  _  _ _       _____) )
+    |  ____/ | | | |     | |     | |  | ||_|| | |     |  ____/
+    | |    | |_| | |_____| |_____| |  | |   | | |_____| |
+    |_|     \\__  |\\______)_______)_|  |_|   |_|\\______)_|
+           (____/
 
-    Run an MCP server using a list of import paths to Click commands:
+    Run an MCP server using a list of import paths to commands:
 
     \b
     ```
-    click-mcp-server pkg1.cli:foo pkg2.cli:bar
+    pycli-mcp pkg1.cli:foo pkg2.cli:bar
     ```
 
     Filtering is supported. For example, if you have a CLI named `foo` and you only want to expose the
@@ -127,7 +128,7 @@ def click_mcp_server(
 
     \b
     ```
-    click-mcp-server pkg.cli:foo -i "bar|baz" -e "baz (sub2|sub3)"
+    pycli-mcp pkg.cli:foo -i "bar|baz" -e "baz (sub2|sub3)"
     ```
     """
     if not specs:
@@ -153,7 +154,7 @@ def click_mcp_server(
         target_spec, exclude_pattern = parse_target_option(command_specs, exclude_entry)
         command_specs[target_spec]["exclude"] = re.compile(exclude_pattern)
 
-    command_queries: list[ClickCommandQuery] = []
+    command_queries: list[CommandQuery] = []
     spec_pattern = re.compile(r"^(?P<spec>(?P<module>[\w.]+):(?P<attr>[\w.]+))$")
     for spec, data in command_specs.items():
         match = spec_pattern.search(spec)
@@ -165,11 +166,7 @@ def click_mcp_server(
         for attr in match.group("attr").split("."):
             obj = getattr(obj, attr)
 
-        if not isinstance(obj, click.Command):
-            msg = f"Expected a Click command, got: {obj.__class__.__name__}"
-            raise TypeError(msg)
-
-        command_query = ClickCommandQuery(
+        command_query = CommandQuery(
             obj,
             aggregate=data.get("aggregate"),
             name=data.get("name"),
@@ -183,7 +180,7 @@ def click_mcp_server(
     if debug:
         app_settings["debug"] = True
 
-    server = ClickMCPServer(command_queries, stateless=True, **app_settings)
+    server = CommandMCPServer(command_queries, stateless=True, **app_settings)
     if debug:
         from pprint import pprint
 
@@ -209,4 +206,4 @@ def click_mcp_server(
 
 
 def main() -> None:
-    click_mcp_server(windows_expand_args=False)
+    pycli_mcp(windows_expand_args=False)

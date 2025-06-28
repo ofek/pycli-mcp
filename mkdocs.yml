@@ -1,9 +1,9 @@
-site_name: Click MCP Server
-site_description: MCP server for any Click command line tool
+site_name: PyCLI MCP
+site_description: MCP server for any Python command line application
 site_author: Ofek Lev
-site_url: https://ofek.dev/click-mcp-server/
-repo_name: ofek/click-mcp-server
-repo_url: https://github.com/ofek/click-mcp-server
+site_url: https://ofek.dev/pycli-mcp/
+repo_name: ofek/pycli-mcp
+repo_url: https://github.com/ofek/pycli-mcp
 edit_uri: blob/main/docs
 copyright: Copyright &copy; Ofek Lev 2025-present
 
@@ -54,7 +54,7 @@ nav:
   - Changelog: changelog.md
 
 watch:
-- src/click_mcp_server
+- src/pycli_mcp
 
 hooks:
 - docs/.hooks/title_from_content.py
@@ -187,7 +187,7 @@ markdown_extensions:
     normalize_issue_symbols: true
     provider: github
     user: ofek
-    repo: click-mcp-server
+    repo: pycli-mcp
 - pymdownx.mark:
 - pymdownx.progressbar:
 - pymdownx.saneheaders:

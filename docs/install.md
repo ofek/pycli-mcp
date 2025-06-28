@@ -2,10 +2,10 @@
 
 -----
 
-`click-mcp-server` is available on PyPI and can be installed with a package manager like [pip](https://github.com/pypa/pip).
+`pycli-mcp` is available on PyPI and can be installed with a package manager like [pip](https://github.com/pypa/pip).
 
 ```
-pip install click-mcp-server
+pip install pycli-mcp
 ```
 
 /// note
