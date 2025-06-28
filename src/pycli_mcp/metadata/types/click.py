@@ -8,12 +8,62 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import click
 
+from pycli_mcp.metadata.interface import CommandMetadata
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-def get_longest_flag(flags: list[str]) -> str:
-    return sorted(flags, key=len)[-1]  # noqa: FURB192
+class ClickCommandMetadata(CommandMetadata):
+    def __init__(self, *, path: str, schema: dict[str, Any], options: dict[str, ClickCommandOption]) -> None:
+        super().__init__(path=path, schema=schema)
+
+        self.__options = options
+
+    @property
+    def options(self) -> dict[str, ClickCommandOption]:
+        return self.__options
+
+    def construct(self, arguments: dict[str, Any] | None = None) -> list[str]:
+        command = self.path.split()
+        if arguments and self.options:
+            args: list[Any] = []
+            opts: list[Any] = []
+            flags: list[str] = []
+            for option_name, value in arguments.items():
+                option = self.options[option_name]
+                if option.type == "argument":
+                    if isinstance(value, list):
+                        args.extend(value)
+                    else:
+                        args.append(value)
+
+                    continue
+
+                if option.flag:
+                    if value:
+                        flags.append(option.flag_name)
+                elif option.multiple:
+                    if option.container:
+                        for v in value:
+                            opts.append(option.flag_name)
+                            opts.extend(v)
+                    else:
+                        for v in value:
+                            opts.extend((option.flag_name, v))
+                elif option.container:
+                    opts.append(option.flag_name)
+                    opts.extend(value)
+                else:
+                    opts.extend((option.flag_name, value))
+
+            command.extend(flags)
+            command.extend(map(str, opts))
+            if args:
+                command.append("--")
+                command.extend(map(str, args))
+
+        return command
 
 
 class ClickCommandOption:
@@ -67,66 +117,8 @@ class ClickCommandOption:
         return self.__flag_name
 
 
-class ClickCommandMetadata:
-    __slots__ = ("__options", "__path", "__schema")
-
-    def __init__(self, path: str, schema: dict[str, Any], options: dict[str, ClickCommandOption]) -> None:
-        self.__path = path
-        self.__schema = schema
-        self.__options = options
-
-    @property
-    def path(self) -> str:
-        return self.__path
-
-    @property
-    def schema(self) -> dict[str, Any]:
-        return self.__schema
-
-    @property
-    def options(self) -> dict[str, ClickCommandOption]:
-        return self.__options
-
-    def construct(self, arguments: dict[str, Any] | None = None) -> list[str]:
-        command = self.path.split()
-        if arguments and self.options:
-            args: list[Any] = []
-            opts: list[Any] = []
-            flags: list[str] = []
-            for option_name, value in arguments.items():
-                option = self.options[option_name]
-                if option.type == "argument":
-                    if isinstance(value, list):
-                        args.extend(value)
-                    else:
-                        args.append(value)
-
-                    continue
-
-                if option.flag:
-                    if value:
-                        flags.append(option.flag_name)
-                elif option.multiple:
-                    if option.container:
-                        for v in value:
-                            opts.append(option.flag_name)
-                            opts.extend(v)
-                    else:
-                        for v in value:
-                            opts.extend((option.flag_name, v))
-                elif option.container:
-                    opts.append(option.flag_name)
-                    opts.extend(value)
-                else:
-                    opts.extend((option.flag_name, value))
-
-            command.extend(flags)
-            command.extend(map(str, opts))
-            if args:
-                command.append("--")
-                command.extend(map(str, args))
-
-        return command
+def get_longest_flag(flags: list[str]) -> str:
+    return sorted(flags, key=len)[-1]  # noqa: FURB192
 
 
 def get_command_description(command: click.Command) -> str:
@@ -454,7 +446,7 @@ Usage: {root_command_name} [OPTIONS] SUBCOMMAND [ARGS]...
 def walk_commands(
     command: click.Command,
     *,
-    aggregate: Literal["root", "group", "none"] = "root",
+    aggregate: Literal["root", "group", "none"],
     name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,

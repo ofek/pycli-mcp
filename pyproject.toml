@@ -3,9 +3,9 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "click-mcp-server"
+name = "pycli-mcp"
 dynamic = ["version"]
-description = "MCP server for any Click command line tool"
+description = "MCP server for any Python command line application"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -35,29 +35,29 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://ofek.dev/click-mcp-server/"
+Homepage = "https://ofek.dev/pycli-mcp/"
 Sponsor = "https://github.com/sponsors/ofek"
-Changelog = "https://ofek.dev/click-mcp-server/changelog/"
-Tracker = "https://github.com/ofek/click-mcp-server/issues"
-Source = "https://github.com/ofek/click-mcp-server"
+Changelog = "https://ofek.dev/pycli-mcp/changelog/"
+Tracker = "https://github.com/ofek/pycli-mcp/issues"
+Source = "https://github.com/ofek/pycli-mcp"
 
 [project.scripts]
-click-mcp-server = "click_mcp_server.cli:main"
+pycli-mcp = "pycli_mcp.cli:main"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.coverage.run]
-source_pkgs = ["click_mcp_server", "tests"]
+source_pkgs = ["pycli_mcp", "tests"]
 branch = true
 parallel = true
 omit = [
-  "src/click_mcp_server/__about__.py",
+  "src/pycli_mcp/__about__.py",
 ]
 
 [tool.coverage.paths]
-click_mcp_server = ["src/click_mcp_server", "*/click-mcp-server/src/click_mcp_server"]
-tests = ["tests", "*/click-mcp-server/tests"]
+pycli_mcp = ["src/pycli_mcp", "*/pycli-mcp/src/pycli_mcp"]
+tests = ["tests", "*/pycli-mcp/tests"]
 
 [tool.coverage.report]
 show_missing = true

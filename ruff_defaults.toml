@@ -673,7 +673,7 @@ select = [
 ban-relative-imports = "all"
 
 [lint.isort]
-known-first-party = ["click_mcp_server"]
+known-first-party = ["pycli_mcp"]
 
 [lint.flake8-pytest-style]
 fixture-parentheses = false

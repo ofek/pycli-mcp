@@ -3,8 +3,8 @@
 -----
 
 ::: mkdocs-click
-    :module: click_mcp_server.cli
-    :command: click_mcp_server
+    :module: pycli_mcp.cli
+    :command: pycli_mcp
     :depth: 1
     :style: table
     :remove_ascii_art: true

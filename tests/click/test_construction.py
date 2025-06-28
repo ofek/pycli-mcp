@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from click_mcp_server.metadata import walk_commands
+from pycli_mcp.metadata.query import walk_commands
 
 
 def test_root_no_options() -> None:

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from click_mcp_server.cli import main
+from pycli_mcp.cli import main
 
 if __name__ == "__main__":
     main()

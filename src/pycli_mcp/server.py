@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 from contextlib import asynccontextmanager
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import uvicorn
 from mcp.server.lowlevel import Server
@@ -22,79 +22,25 @@ from mcp.types import (
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from click_mcp_server.metadata import ClickCommandMetadata, walk_commands
+from pycli_mcp.metadata.query import CommandQuery
 
 if TYPE_CHECKING:
-    import re
-    from collections.abc import AsyncIterator, Iterator, Sequence
+    from collections.abc import AsyncIterator, Sequence
 
-    import click
     from mcp.server.streamable_http import EventStore
 
-
-class ClickCommandQuery:
-    """
-    A wrapper around a root Click command that influences the collection behavior. Example usage:
-
-    ```python
-    from click_mcp_server import ClickCommandQuery, ClickMCPServer
-
-    from mypkg.cli import cmd
-
-    # Only expose the `foo` subcommand
-    query = ClickCommandQuery(cmd, include=r"^foo$")
-    server = ClickMCPServer(commands=[query])
-    server.run()
-    ```
-
-    Parameters:
-        command: The Click command to query.
-        aggregate: The level of aggregation to use.
-        name: The expected name of the root command.
-        include: A regular expression to include in the query.
-        exclude: A regular expression to exclude in the query.
-        strict_types: Whether to error on unknown types.
-    """
-
-    __slots__ = ("__aggregate", "__command", "__exclude", "__include", "__name", "__strict_types")
-
-    def __init__(
-        self,
-        command: click.Command,
-        *,
-        aggregate: Literal["root", "group", "none"] | None = None,
-        name: str | None = None,
-        include: str | re.Pattern | None = None,
-        exclude: str | re.Pattern | None = None,
-        strict_types: bool = False,
-    ) -> None:
-        self.__command = command
-        self.__aggregate = aggregate or "root"
-        self.__name = name
-        self.__include = include
-        self.__exclude = exclude
-        self.__strict_types = strict_types
-
-    def __iter__(self) -> Iterator[ClickCommandMetadata]:
-        yield from walk_commands(
-            self.__command,
-            aggregate=self.__aggregate,
-            name=self.__name,
-            include=self.__include,
-            exclude=self.__exclude,
-            strict_types=self.__strict_types,
-        )
+    from pycli_mcp.metadata.interface import CommandMetadata
 
 
-class ClickCommand:
+class Command:
     __slots__ = ("__metadata", "__tool")
 
-    def __init__(self, metadata: ClickCommandMetadata, tool: Tool):
+    def __init__(self, metadata: CommandMetadata, tool: Tool):
         self.__metadata = metadata
         self.__tool = tool
 
     @property
-    def metadata(self) -> ClickCommandMetadata:
+    def metadata(self) -> CommandMetadata:
         return self.__metadata
 
     @property
@@ -102,22 +48,22 @@ class ClickCommand:
         return self.__tool
 
 
-class ClickMCPServer:
+class CommandMCPServer:
     """
-    An MCP server that can be used to run Click commands, backed by [Starlette](https://github.com/encode/starlette)
+    An MCP server that can be used to run Python CLIs, backed by [Starlette](https://github.com/encode/starlette)
     and [Uvicorn](https://github.com/encode/uvicorn). Example usage:
 
     ```python
-    from click_mcp_server import ClickMCPServer
+    from pycli_mcp import CommandMCPServer
 
     from mypkg.cli import cmd
 
-    server = ClickMCPServer(commands=[cmd], stateless=True)
+    server = CommandMCPServer(commands=[cmd], stateless=True)
     server.run()
     ```
 
     Parameters:
-        commands: The Click commands to expose as MCP tools.
+        commands: The commands to expose as MCP tools.
 
     Other parameters:
         event_store: Optional [event store](https://github.com/modelcontextprotocol/python-sdk/blob/v1.9.4/src/mcp/server/streamable_http.py#L79)
@@ -130,15 +76,15 @@ class ClickMCPServer:
 
     def __init__(
         self,
-        commands: Sequence[click.Command | ClickCommandQuery],
+        commands: Sequence[Any],
         *,
         event_store: EventStore | None = None,
         stateless: bool = False,
         **app_settings: Any,
     ) -> None:
-        self.__command_queries = [c if isinstance(c, ClickCommandQuery) else ClickCommandQuery(c) for c in commands]
+        self.__command_queries = [c if isinstance(c, CommandQuery) else CommandQuery(c) for c in commands]
         self.__app_settings = app_settings
-        self.__server: Server = Server("click_mcp_server")
+        self.__server: Server = Server("pycli_mcp")
         self.__session_manager = StreamableHTTPSessionManager(
             app=self.__server,
             event_store=event_store,
@@ -169,13 +115,13 @@ class ClickMCPServer:
         return self.__session_manager
 
     @cached_property
-    def commands(self) -> dict[str, ClickCommand]:
+    def commands(self) -> dict[str, Command]:
         """
         Returns:
-            Dictionary used internally to store metadata about the exposed Click commands. Although it should not be
-                modified, the keys are the available MCP tool names and useful to know when overriding the default handlers.
+            Dictionary used internally to store metadata about the exposed commands. Although it should not be modified,
+                the keys are the available MCP tool names and useful to know when overriding the default handlers.
         """
-        commands: dict[str, ClickCommand] = {}
+        commands: dict[str, Command] = {}
         for query in self.__command_queries:
             for metadata in query:
                 tool_name = metadata.path.replace(" ", ".").replace("-", "_")
@@ -184,7 +130,7 @@ class ClickMCPServer:
                     description=metadata.schema["description"],
                     inputSchema=metadata.schema,
                 )
-                commands[tool_name] = ClickCommand(metadata, tool)
+                commands[tool_name] = Command(metadata, tool)
 
         return commands
 
@@ -212,7 +158,7 @@ class ClickMCPServer:
         This would only be used directly if you want to override the handler for the `ListToolsRequest`.
 
         Returns:
-            The MCP tools for the Click commands.
+            The MCP tools for the commands.
         """
         return [command.tool for command in self.commands.values()]
 
