@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://ofek.dev/click-mcp-server/</loc>
+         <loc>https://ofek.dev/pycli-mcp/</loc>
          <lastmod>2020-02-02</lastmod>
     </url>
     <url>
-         <loc>https://ofek.dev/click-mcp-server/api/</loc>
+         <loc>https://ofek.dev/pycli-mcp/api/</loc>
          <lastmod>2020-02-02</lastmod>
     </url>
     <url>
-         <loc>https://ofek.dev/click-mcp-server/changelog/</loc>
+         <loc>https://ofek.dev/pycli-mcp/changelog/</loc>
          <lastmod>2020-02-02</lastmod>
     </url>
     <url>
-         <loc>https://ofek.dev/click-mcp-server/cli/</loc>
+         <loc>https://ofek.dev/pycli-mcp/cli/</loc>
          <lastmod>2020-02-02</lastmod>
     </url>
     <url>
-         <loc>https://ofek.dev/click-mcp-server/install/</loc>
+         <loc>https://ofek.dev/pycli-mcp/install/</loc>
          <lastmod>2020-02-02</lastmod>
     </url>
 </urlset>
