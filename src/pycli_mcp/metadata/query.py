@@ -89,6 +89,23 @@ def walk_commands(
             exclude=exclude,
             strict_types=strict_types,
         )
-    else:
-        msg = f"Unsupported command type: {type(command)}"
-        raise NotImplementedError(msg)
+        return
+
+    # Typer
+    if hasattr(command, "registered_commands") and hasattr(command, "registered_groups"):
+        from typer.main import get_command
+
+        from pycli_mcp.metadata.types.click import walk_commands
+
+        yield from walk_commands(
+            get_command(command),
+            aggregate=aggregate,
+            name=name,
+            include=include,
+            exclude=exclude,
+            strict_types=strict_types,
+        )
+        return
+
+    msg = f"Unsupported command type: {type(command)}"
+    raise NotImplementedError(msg)

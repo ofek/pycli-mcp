@@ -13,3 +13,4 @@ ignore = [
 [lint.extend-per-file-ignores]
 "docs/.hooks/**/*" = ["INP001"]
 "src/pycli_mcp/cli.py" = ["T201", "T203"]
+"tests/typer/**/*" = ["B008", "TC003"]

@@ -14,6 +14,7 @@ This provides an extensible [MCP](https://modelcontextprotocol.io) server that i
 Supported frameworks:
 
 - [Click](https://github.com/pallets/click)
+- [Typer](https://github.com/fastapi/typer)
 
 ## Navigation
 
