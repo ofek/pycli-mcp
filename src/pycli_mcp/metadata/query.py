@@ -79,9 +79,9 @@ def walk_commands(
 
     # Click
     if hasattr(command, "context_class"):
-        from pycli_mcp.metadata.types.click import walk_commands
+        from pycli_mcp.metadata.types.click import walk_commands as walk_click_commands
 
-        yield from walk_commands(
+        yield from walk_click_commands(
             command,
             aggregate=aggregate,
             name=name,
@@ -95,9 +95,9 @@ def walk_commands(
     if hasattr(command, "registered_commands") and hasattr(command, "registered_groups"):
         from typer.main import get_command
 
-        from pycli_mcp.metadata.types.click import walk_commands
+        from pycli_mcp.metadata.types.click import walk_commands as walk_click_commands
 
-        yield from walk_commands(
+        yield from walk_click_commands(
             get_command(command),
             aggregate=aggregate,
             name=name,
@@ -106,6 +106,23 @@ def walk_commands(
             strict_types=strict_types,
         )
         return
+
+    # Argparse
+    if hasattr(command, "_actions") and hasattr(command, "parse_args"):
+        import argparse
+
+        if isinstance(command, argparse.ArgumentParser):
+            from pycli_mcp.metadata.types.argparse import walk_commands as walk_argparse_commands
+
+            yield from walk_argparse_commands(
+                command,
+                aggregate=aggregate,
+                name=name or command.prog,
+                include=include,
+                exclude=exclude,
+                strict_types=strict_types,
+            )
+            return
 
     msg = f"Unsupported command type: {type(command)}"
     raise NotImplementedError(msg)
