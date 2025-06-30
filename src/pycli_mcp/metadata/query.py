@@ -77,6 +77,26 @@ def walk_commands(
     if aggregate is None:
         aggregate = "root"
 
+    yield from _walk_commands(
+        command,
+        aggregate=aggregate,
+        name=name,
+        include=include,
+        exclude=exclude,
+        strict_types=strict_types,
+    )
+
+
+def _walk_commands(
+    command: Any,
+    *,
+    aggregate: Literal["root", "group", "none"],
+    name: str | None,
+    include: str | re.Pattern | None,
+    exclude: str | re.Pattern | None,
+    strict_types: bool,
+    depth: int = 0,
+) -> Iterator[CommandMetadata]:
     # Click
     if hasattr(command, "context_class"):
         from pycli_mcp.metadata.types.click import walk_commands as walk_click_commands
@@ -123,6 +143,22 @@ def walk_commands(
                 strict_types=strict_types,
             )
             return
+
+    if callable(command):
+        if depth > 0:
+            msg = "Callable did not return a known command type"
+            raise NotImplementedError(msg)
+
+        yield from _walk_commands(
+            command(),
+            aggregate=aggregate,
+            name=name,
+            include=include,
+            exclude=exclude,
+            strict_types=strict_types,
+            depth=depth + 1,
+        )
+        return
 
     msg = f"Unsupported command type: {type(command)}"
     raise NotImplementedError(msg)

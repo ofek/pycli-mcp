@@ -116,7 +116,7 @@ def pycli_mcp(
     |_|     \\__  |\\______)_______)_|  |_|   |_|\\______)_|
            (____/
 
-    Run an MCP server using a list of import paths to commands:
+    Run an MCP server using a list of import paths to commands or callable objects that return a command:
 
     \b
     ```
