@@ -41,6 +41,36 @@ def test_root_command() -> None:
     assert not metadata.options
 
 
+def test_dynamic() -> None:
+    from pycli_mcp.metadata.query import walk_commands
+
+    def func() -> click.Command:
+        @click.command()
+        def cli() -> None:
+            # fmt: off
+            """
+
+                text
+                    nested
+
+            """
+            # fmt: on
+
+        return cli
+
+    commands = list(walk_commands(func, aggregate="none"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "text\n    nested",
+        "properties": {},
+        "title": "cli",
+        "type": "object",
+    }
+
+
 def test_nested_commands() -> None:
     @click.group()
     def cli() -> None:
