@@ -15,6 +15,7 @@ Supported frameworks:
 
 - [Click](https://github.com/pallets/click)
 - [Typer](https://github.com/fastapi/typer)
+- [Argparse](https://docs.python.org/3/library/argparse.html) (experimental support)
 
 ## Installation
 
