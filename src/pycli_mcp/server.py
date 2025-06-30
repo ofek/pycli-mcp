@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import os
 import subprocess
 from contextlib import asynccontextmanager
 from functools import cached_property
@@ -173,12 +174,16 @@ class CommandMCPServer:
         The default handler for the `CallToolRequest`.
         """
         command = self.commands[req.params.name].metadata.construct(req.params.arguments)
+        env_vars = dict(os.environ)
+        env_vars["PYCLI_MCP_TOOL_NAME"] = req.params.name
+
         try:
             process = subprocess.run(  # noqa: PLW1510
                 command,
                 encoding="utf-8",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                env=env_vars,
             )
         # This can happen if the command is not found
         except subprocess.CalledProcessError as e:
