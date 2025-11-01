@@ -25,23 +25,23 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version-file: pyproject.toml
 
     - name: Install UV
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v7
 
     - name: Build wheel and source distribution
       run: uv build
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: artifacts
         path: dist/*
@@ -58,7 +58,7 @@ jobs:
 
     steps:
     - name: Download Python artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: artifacts
         path: dist
