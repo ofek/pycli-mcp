@@ -121,6 +121,41 @@ def get_longest_flag(flags: list[str]) -> str:
     return sorted(flags, key=len)[-1]  # noqa: FURB192
 
 
+def is_command_group(command: click.Command) -> bool:
+    # Detect group-like commands by capability rather than `isinstance`: Typer
+    # >=0.26 builds its commands from a vendored Click fork (`typer._click`),
+    # so its groups are not instances of the stdlib `click.Group` imported here.
+    return hasattr(command, "list_commands") and hasattr(command, "get_command")
+
+
+def get_param_info(param: click.Parameter) -> dict[str, Any]:
+    # Typer >=0.26 vendors its own fork of Click as `typer._click`, whose
+    # Parameter and ParamType classes don't implement `to_info_dict`. When it's
+    # available (real Click, including custom types that override it) defer to
+    # it; otherwise rebuild the subset of keys this module consumes, mirroring
+    # Click's own `param_type` derivation (class name with the type suffix
+    # stripped) so the values match what `to_info_dict` would have produced.
+    if hasattr(param.type, "to_info_dict"):
+        return param.to_info_dict()
+
+    param_type = type(param.type).__name__.partition("ParamType")[0].partition("ParameterType")[0]
+    type_info: dict[str, Any] = {"param_type": param_type}
+    if (choices := getattr(param.type, "choices", None)) is not None:
+        type_info["choices"] = choices
+
+    return {
+        "opts": param.opts,
+        "param_type_name": param.param_type_name,
+        "required": param.required,
+        "multiple": param.multiple,
+        "nargs": param.nargs,
+        "default": param.default,
+        "hidden": getattr(param, "hidden", False),
+        "help": getattr(param, "help", None),
+        "type": type_info,
+    }
+
+
 def get_command_description(command: click.Command) -> str:
     # Truncate the help text to the first form feed
     return inspect.cleandoc(command.help or command.short_help or "").split("\f")[0].strip()
@@ -131,7 +166,7 @@ def get_command_options_block(ctx: click.Context) -> str:
 
     options = ""
     for param in ctx.command.get_params(ctx):
-        info = param.to_info_dict()
+        info = get_param_info(param)
         if info.get("hidden", False) or "--help" in info["opts"]:
             continue
 
@@ -176,7 +211,7 @@ def walk_command_tree(
         return
 
     ctx = command.context_class(command, parent=parent, info_name=name, **command.context_settings)
-    if not isinstance(command, click.Group):
+    if not is_command_group(command):
         subcommand_path = " ".join(ctx.command_path.split()[1:])
         if exclude is not None and re.search(exclude, subcommand_path):
             return
@@ -205,7 +240,7 @@ def walk_commands_no_aggregation(
         properties: dict[str, Any] = {}
         options: dict[str, ClickCommandOption] = {}
         for param in ctx.command.get_params(ctx):
-            info = param.to_info_dict()
+            info = get_param_info(param)
             flags = info["opts"]
             if info.get("hidden", False) or "--help" in flags:
                 continue
@@ -397,7 +432,7 @@ def walk_commands_root_aggregation(
 ) -> Iterator[ClickCommandMetadata]:
     root_command_name = name or command.name
     description = ""
-    if isinstance(command, click.Group):
+    if is_command_group(command):
         ctx = command.context_class(command, info_name=root_command_name, **command.context_settings)
         description += f"""\
 # {root_command_name}
