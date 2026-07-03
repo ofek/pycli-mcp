@@ -8,7 +8,7 @@ from pathlib import Path
 import typer
 from typer.main import get_command
 
-from pycli_mcp.metadata.types.click import walk_commands
+from pycli_mcp.metadata.types.typer import walk_commands
 
 
 class Choices(str, Enum):
@@ -41,6 +41,39 @@ def test_no_help_text() -> None:
         "type": "object",
     }
     assert len(metadata.options) == 1
+
+
+def test_completion_options() -> None:
+    app = typer.Typer()
+
+    @app.command()
+    def cli() -> None:
+        pass
+
+    commands = list(walk_commands(get_command(app), aggregate="none"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "install_completion": {
+                "default": None,
+                "description": "Install completion for the current shell.",
+                "title": "install_completion",
+                "type": "boolean",
+            },
+            "show_completion": {
+                "default": None,
+                "description": "Show completion for the current shell, to copy it or customize the installation.",
+                "title": "show_completion",
+                "type": "boolean",
+            },
+        },
+        "title": "cli",
+        "type": "object",
+    }
+    assert metadata.construct({"install_completion": True}) == ["cli", "--install-completion"]
 
 
 def test_boolean() -> None:
@@ -258,6 +291,52 @@ def test_multiple_allowed() -> None:
         "type": "object",
     }
     assert sorted(metadata.options) == ["bar", "baz", "foo"]
+
+
+def test_tuple_option_and_argument() -> None:
+    app = typer.Typer(add_completion=False)
+
+    @app.command()
+    def cli(
+        *,
+        argument: tuple[str, str] = typer.Argument(...),
+        option: tuple[str, str] = typer.Option(..., "--option"),
+    ) -> None:
+        pass
+
+    commands = list(walk_commands(get_command(app), aggregate="none"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
+    assert metadata.schema == {
+        "description": "",
+        "properties": {
+            "argument": {
+                "items": {"type": "string"},
+                "title": "argument",
+                "type": "array",
+            },
+            "option": {
+                "items": {"type": "string"},
+                "title": "option",
+                "type": "array",
+            },
+        },
+        "required": ["argument", "option"],
+        "title": "cli",
+        "type": "object",
+    }
+    assert metadata.construct({"argument": ["a1", "a2"], "option": ["o1", "o2"]}) == [
+        "cli",
+        "--option",
+        "o1",
+        "o2",
+        "--",
+        "a1",
+        "a2",
+    ]
+    assert sorted(metadata.options) == ["argument", "option"]
 
 
 def test_required_option() -> None:
