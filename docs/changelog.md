@@ -8,9 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+***Changed:***
+
+- Run MCP tool subprocesses in a worker thread to avoid blocking the async server
+
 ***Added:***
 
 - Set the `PYCLI_MCP_USER_AGENT` environment variable from the per-request HTTP `User-Agent` when running commands
+
+***Fixed:***
+
+- Fix support for recent Typer releases, including Typer-injected completion options, tuple-valued parameters, `Path` parameters with strict type checking, and command objects returned by `typer.main.get_command()`
+- Fix argparse usage extraction on Python 3.14 by disabling colored terminal output while formatting usage
 
 ## 0.3.0 - 2025-06-30
 
