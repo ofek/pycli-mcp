@@ -130,6 +130,11 @@ def pycli_mcp(
     ```
     pycli-mcp pkg.cli:foo -i "bar|baz" -e "baz (sub2|sub3)"
     ```
+
+    \f
+
+    Raises:
+        ValueError: If a command spec or per-target option is invalid.
     """
     if not specs:
         click.echo(ctx.get_help())

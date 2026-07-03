@@ -8,7 +8,12 @@ from pycli_mcp.metadata.types.argparse import walk_commands
 
 
 def create_filter_test_parser() -> argparse.ArgumentParser:
-    """Return a parser with nested sub-parsers used for filter tests."""
+    """
+    Return a parser with nested sub-parsers used for filter tests.
+
+    Returns:
+        A parser with nested sub-parsers.
+    """
 
     parser = argparse.ArgumentParser(prog="my-cli")
     subparsers = parser.add_subparsers(dest="command")

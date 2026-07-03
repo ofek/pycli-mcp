@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import asyncio
 import os
 import subprocess
 from contextlib import asynccontextmanager
@@ -166,27 +167,35 @@ class CommandMCPServer:
     async def list_tools_handler(self, _: ListToolsRequest) -> ServerResult:
         """
         The default handler for the `ListToolsRequest`.
+
+        Returns:
+            The available MCP tools.
         """
         return ServerResult(ListToolsResult(tools=self.list_command_tools()))
 
     async def call_tool_handler(self, req: CallToolRequest) -> ServerResult:
         """
         The default handler for the `CallToolRequest`.
+
+        Returns:
+            The command output.
         """
         command = self.commands[req.params.name].metadata.construct(req.params.arguments)
         env_vars = dict(os.environ)
         env_vars["PYCLI_MCP_TOOL_NAME"] = req.params.name
 
         try:
-            process = subprocess.run(  # noqa: PLW1510
+            process = await asyncio.to_thread(
+                subprocess.run,
                 command,
                 encoding="utf-8",
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 env=env_vars,
+                check=False,
             )
         # This can happen if the command is not found
-        except subprocess.CalledProcessError as e:
+        except OSError as e:
             return ServerResult(CallToolResult(content=[TextContent(type="text", text=str(e))], isError=True))
 
         if process.returncode:

@@ -46,11 +46,8 @@ jobs:
     - name: Install Hatch
       uses: pypa/hatch@install
 
-    - name: Run static analysis
-      run: hatch fmt --check
-
-    - name: Check types
-      run: hatch run types:check
+    - name: Run checks
+      run: hatch check
 
     - name: Run tests
       run: hatch test --python ${{ matrix.python-version }} --randomize

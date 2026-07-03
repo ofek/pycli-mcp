@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typer
+from typer.main import get_command
 
 from pycli_mcp.metadata.query import walk_commands
 
@@ -32,6 +33,20 @@ def test_root_command() -> None:
         "title": "cli",
         "type": "object",
     }
+
+
+def test_root_command_from_typer_command() -> None:
+    app = typer.Typer(add_completion=False)
+
+    @app.command()
+    def cli() -> None:
+        pass
+
+    commands = list(walk_commands(get_command(app), aggregate="none"))
+    assert len(commands) == 1, commands
+
+    metadata = commands[0]
+    assert metadata.path == "cli"
 
 
 def test_nested_commands() -> None:

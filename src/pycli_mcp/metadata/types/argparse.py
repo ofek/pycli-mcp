@@ -166,14 +166,19 @@ def get_parser_options_block(parser: argparse.ArgumentParser) -> str:
 def get_parser_full_usage(parser: argparse.ArgumentParser, name: str) -> str:
     # Format usage - temporarily override prog to use our name
     original_prog = parser.prog
+    original_color = getattr(parser, "color", None)
+    colorable_parser: Any = parser
     try:
         parser.prog = name
+        if original_color is not None:
+            colorable_parser.color = False
         usage = parser.format_usage().strip()
-        if usage.startswith("usage: "):
-            usage = usage[7:]
+        usage = usage.removeprefix("usage: ")
         usage = f"Usage: {usage}"
     finally:
         parser.prog = original_prog
+        if original_color is not None:
+            colorable_parser.color = original_color
 
     if description := get_parser_description(parser):
         usage += f"\n\n{description}"
@@ -192,7 +197,12 @@ def walk_parser_tree(
     exclude: str | re.Pattern | None = None,
     parent_path: str = "",
 ) -> Iterator[tuple[str, argparse.ArgumentParser]]:
-    """Walk through parser tree including subparsers."""
+    """
+    Walk through parser tree including subparsers.
+
+    Yields:
+        Command paths with their corresponding parser.
+    """
     # Check if this parser has subparsers
     subparsers_action = None
     for action in parser._actions:

@@ -97,11 +97,13 @@ def _walk_commands(
     strict_types: bool,
     depth: int = 0,
 ) -> Iterator[CommandMetadata]:
-    # Click
-    if hasattr(command, "context_class"):
-        from pycli_mcp.metadata.types.click import walk_commands as walk_click_commands
+    # Typer
+    from pycli_mcp.metadata.types.typer import is_typer_app, is_typer_command
 
-        yield from walk_click_commands(
+    if is_typer_app(command) or is_typer_command(command):
+        from pycli_mcp.metadata.types.typer import walk_commands as walk_typer_commands
+
+        yield from walk_typer_commands(
             command,
             aggregate=aggregate,
             name=name,
@@ -111,14 +113,12 @@ def _walk_commands(
         )
         return
 
-    # Typer
-    if hasattr(command, "registered_commands") and hasattr(command, "registered_groups"):
-        from typer.main import get_command
-
+    # Click
+    if hasattr(command, "context_class"):
         from pycli_mcp.metadata.types.click import walk_commands as walk_click_commands
 
         yield from walk_click_commands(
-            get_command(command),
+            command,
             aggregate=aggregate,
             name=name,
             include=include,

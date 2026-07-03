@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import inspect
 import re
-from typing import TYPE_CHECKING, Any, Literal
+from collections.abc import Callable, Iterator
+from typing import Any, Literal
 
 import click
 
 from pycli_mcp.metadata.interface import CommandMetadata
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
+ParameterInfoGetter = Callable[[Any, Any], dict[str, Any]]
+CommandUsagePiecesGetter = Callable[[Any, Any], list[str]]
+CommandGroupChecker = Callable[[Any], bool]
 
 
 class ClickCommandMetadata(CommandMetadata):
@@ -126,12 +128,32 @@ def get_command_description(command: click.Command) -> str:
     return inspect.cleandoc(command.help or command.short_help or "").split("\f")[0].strip()
 
 
+def is_command_group(command: click.Command) -> bool:
+    return isinstance(command, click.Group)
+
+
+def get_command_usage_pieces(command: click.Command, ctx: click.Context) -> list[str]:
+    return list(command.collect_usage_pieces(ctx))
+
+
+def get_parameter_info(param: click.Parameter, _ctx: click.Context) -> dict[str, Any]:
+    return param.to_info_dict()
+
+
 def get_command_options_block(ctx: click.Context) -> str:
+    return _get_command_options_block(ctx)
+
+
+def _get_command_options_block(
+    ctx: click.Context,
+    *,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+) -> str:
     import textwrap
 
-    options = ""
+    lines: list[str] = []
     for param in ctx.command.get_params(ctx):
-        info = param.to_info_dict()
+        info = parameter_info_getter(param, ctx)
         if info.get("hidden", False) or "--help" in info["opts"]:
             continue
 
@@ -140,43 +162,54 @@ def get_command_options_block(ctx: click.Context) -> str:
             continue
 
         metadata, help_text = help_record
-        options += f"\n{metadata}"
+        line = metadata
         help_text = textwrap.dedent(help_text).strip()
         if help_text:
             separator = " " * 2
-            options += separator
-            options += textwrap.indent(help_text, " " * (len(metadata) + len(separator))).strip()
+            line += separator
+            line += textwrap.indent(help_text, " " * (len(metadata) + len(separator))).strip()
+        lines.append(line)
 
-    return options.lstrip()
+    return "\n".join(lines)
 
 
 def get_command_full_usage(ctx: click.Context) -> str:
+    return _get_command_full_usage(ctx)
+
+
+def _get_command_full_usage(
+    ctx: click.Context,
+    *,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+    command_usage_pieces_getter: CommandUsagePiecesGetter = get_command_usage_pieces,
+) -> str:
     usage_pieces = [f"Usage: {ctx.command_path}"]
-    usage_pieces.extend(ctx.command.collect_usage_pieces(ctx))
+    usage_pieces.extend(command_usage_pieces_getter(ctx.command, ctx))
     usage = " ".join(usage_pieces)
 
     if description := get_command_description(ctx.command):
         usage += f"\n\n{description}"
 
-    if options := get_command_options_block(ctx):
+    if options := _get_command_options_block(ctx, parameter_info_getter=parameter_info_getter):
         usage += f"\n\nOptions:\n{options}"
 
     return usage
 
 
 def walk_command_tree(
-    command: click.Command,
+    command: Any,
     *,
     name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,
     parent: click.Context | None = None,
+    command_group_checker: CommandGroupChecker = is_command_group,
 ) -> Iterator[click.Context]:
     if command.hidden:
         return
 
     ctx = command.context_class(command, parent=parent, info_name=name, **command.context_settings)
-    if not isinstance(command, click.Group):
+    if not command_group_checker(command):
         subcommand_path = " ".join(ctx.command_path.split()[1:])
         if exclude is not None and re.search(exclude, subcommand_path):
             return
@@ -190,28 +223,47 @@ def walk_command_tree(
         subcommand = command.get_command(ctx, subcommand_name)
         if subcommand is None:
             continue
-        yield from walk_command_tree(subcommand, name=subcommand_name, include=include, exclude=exclude, parent=ctx)
+        yield from walk_command_tree(
+            subcommand,
+            name=subcommand_name,
+            include=include,
+            exclude=exclude,
+            parent=ctx,
+            command_group_checker=command_group_checker,
+        )
 
 
 def walk_commands_no_aggregation(
-    command: click.Command,
+    command: Any,
     *,
     name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,
     strict_types: bool = False,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+    command_group_checker: CommandGroupChecker = is_command_group,
 ) -> Iterator[ClickCommandMetadata]:
-    for ctx in walk_command_tree(command, name=name or command.name, include=include, exclude=exclude):
+    for ctx in walk_command_tree(
+        command,
+        name=name or command.name,
+        include=include,
+        exclude=exclude,
+        command_group_checker=command_group_checker,
+    ):
         properties: dict[str, Any] = {}
         options: dict[str, ClickCommandOption] = {}
         for param in ctx.command.get_params(ctx):
-            info = param.to_info_dict()
+            info = parameter_info_getter(param, ctx)
             flags = info["opts"]
             if info.get("hidden", False) or "--help" in flags:
                 continue
 
-            flag_name = get_longest_flag(flags)
-            option_name = flag_name.lstrip("-").replace("-", "_")
+            if flags:
+                flag_name = get_longest_flag(flags)
+                option_name = flag_name.lstrip("-").replace("-", "_")
+            else:
+                flag_name = info["name"] or ""
+                option_name = flag_name.replace("-", "_")
 
             option_data = {
                 "type": info["param_type_name"],
@@ -253,7 +305,7 @@ def walk_commands_no_aggregation(
                     prop["items"] = {"type": "number"}
                 else:
                     prop["type"] = "number"
-            elif type_name in {"Choice", "TyperChoice"}:
+            elif "choices" in type_data:
                 prop["type"] = "string"
                 prop["enum"] = list(type_data["choices"])
             elif type_name == "Tuple":
@@ -291,14 +343,23 @@ def walk_commands_no_aggregation(
 
 
 def walk_commands_group_aggregation(
-    command: click.Command,
+    command: Any,
     *,
     name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+    command_usage_pieces_getter: CommandUsagePiecesGetter = get_command_usage_pieces,
+    command_group_checker: CommandGroupChecker = is_command_group,
 ) -> Iterator[ClickCommandMetadata]:
     groups: dict[str, dict[str, click.Context]] = {}
-    for ctx in walk_command_tree(command, name=name or command.name, include=include, exclude=exclude):
+    for ctx in walk_command_tree(
+        command,
+        name=name or command.name,
+        include=include,
+        exclude=exclude,
+        command_group_checker=command_group_checker,
+    ):
         if ctx.parent is None:
             group_path = ctx.command_path
             command_name = ""
@@ -311,6 +372,12 @@ def walk_commands_group_aggregation(
     for group_path, commands in groups.items():
         # Root is a command rather than a group
         if "" in commands:
+            root_ctx = commands[""]
+            command_usage = _get_command_full_usage(
+                root_ctx,
+                parameter_info_getter=parameter_info_getter,
+                command_usage_pieces_getter=command_usage_pieces_getter,
+            )
             yield ClickCommandMetadata(
                 path=group_path,
                 schema={
@@ -326,7 +393,7 @@ def walk_commands_group_aggregation(
                         },
                     },
                     "title": group_path,
-                    "description": f"{get_command_full_usage(ctx)}\n",
+                    "description": f"{command_usage}\n",
                 },
                 options={
                     "args": ClickCommandOption(
@@ -344,10 +411,15 @@ Usage: {group_path} SUBCOMMAND [ARGS]...
 # Available subcommands
 """
         for command_name, ctx in commands.items():
+            command_usage = _get_command_full_usage(
+                ctx,
+                parameter_info_getter=parameter_info_getter,
+                command_usage_pieces_getter=command_usage_pieces_getter,
+            )
             description += f"""
 ## {command_name}
 
-{get_command_full_usage(ctx)}
+{command_usage}
 """
 
         yield ClickCommandMetadata(
@@ -389,15 +461,18 @@ Usage: {group_path} SUBCOMMAND [ARGS]...
 
 
 def walk_commands_root_aggregation(
-    command: click.Command,
+    command: Any,
     *,
     name: str | None = None,
     include: str | re.Pattern | None = None,
     exclude: str | re.Pattern | None = None,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+    command_usage_pieces_getter: CommandUsagePiecesGetter = get_command_usage_pieces,
+    command_group_checker: CommandGroupChecker = is_command_group,
 ) -> Iterator[ClickCommandMetadata]:
     root_command_name = name or command.name
     description = ""
-    if isinstance(command, click.Group):
+    if command_group_checker(command):
         ctx = command.context_class(command, info_name=root_command_name, **command.context_settings)
         description += f"""\
 # {root_command_name}
@@ -406,14 +481,25 @@ Usage: {root_command_name} [OPTIONS] SUBCOMMAND [ARGS]...
 """
         if root_command_description := get_command_description(command):
             description += f"\n{root_command_description}\n"
-        if root_command_options := get_command_options_block(ctx):
+        if root_command_options := _get_command_options_block(ctx, parameter_info_getter=parameter_info_getter):
             description += f"\nOptions:\n{root_command_options}\n"
 
-    for ctx in walk_command_tree(command, name=root_command_name, include=include, exclude=exclude):
+    for ctx in walk_command_tree(
+        command,
+        name=root_command_name,
+        include=include,
+        exclude=exclude,
+        command_group_checker=command_group_checker,
+    ):
+        command_usage = _get_command_full_usage(
+            ctx,
+            parameter_info_getter=parameter_info_getter,
+            command_usage_pieces_getter=command_usage_pieces_getter,
+        )
         description += f"""
 ## {ctx.command_path}
 
-{get_command_full_usage(ctx)}
+{command_usage}
 """
 
     yield ClickCommandMetadata(
@@ -444,7 +530,7 @@ Usage: {root_command_name} [OPTIONS] SUBCOMMAND [ARGS]...
 
 
 def walk_commands(
-    command: click.Command,
+    command: Any,
     *,
     aggregate: Literal["root", "group", "none"],
     name: str | None = None,
@@ -452,12 +538,37 @@ def walk_commands(
     exclude: str | re.Pattern | None = None,
     strict_types: bool = False,
 ) -> Iterator[ClickCommandMetadata]:
+    yield from _walk_commands(
+        command,
+        aggregate=aggregate,
+        name=name,
+        include=include,
+        exclude=exclude,
+        strict_types=strict_types,
+    )
+
+
+def _walk_commands(
+    command: Any,
+    *,
+    aggregate: Literal["root", "group", "none"],
+    name: str | None = None,
+    include: str | re.Pattern | None = None,
+    exclude: str | re.Pattern | None = None,
+    strict_types: bool = False,
+    parameter_info_getter: ParameterInfoGetter = get_parameter_info,
+    command_usage_pieces_getter: CommandUsagePiecesGetter = get_command_usage_pieces,
+    command_group_checker: CommandGroupChecker = is_command_group,
+) -> Iterator[ClickCommandMetadata]:
     if aggregate == "root":
         yield from walk_commands_root_aggregation(
             command,
             name=name,
             include=include,
             exclude=exclude,
+            parameter_info_getter=parameter_info_getter,
+            command_usage_pieces_getter=command_usage_pieces_getter,
+            command_group_checker=command_group_checker,
         )
     elif aggregate == "group":
         yield from walk_commands_group_aggregation(
@@ -465,6 +576,9 @@ def walk_commands(
             name=name,
             include=include,
             exclude=exclude,
+            parameter_info_getter=parameter_info_getter,
+            command_usage_pieces_getter=command_usage_pieces_getter,
+            command_group_checker=command_group_checker,
         )
     elif aggregate == "none":
         yield from walk_commands_no_aggregation(
@@ -473,6 +587,8 @@ def walk_commands(
             include=include,
             exclude=exclude,
             strict_types=strict_types,
+            parameter_info_getter=parameter_info_getter,
+            command_group_checker=command_group_checker,
         )
     else:
         msg = f"Invalid aggregate value: {aggregate}"

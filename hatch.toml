@@ -1,10 +1,6 @@
 [envs.default]
 installer = "uv"
 
-[envs.hatch-static-analysis]
-config-path = "ruff_defaults.toml"
-dependencies = ["ruff==0.9.9"]
-
 [envs.hatch-test]
 extra-dependencies = [
   "click",
@@ -19,6 +15,11 @@ extra-dependencies = [
   "typer",
 ]
 [envs.types.scripts]
+check = "mypy {args:src/pycli_mcp tests}"
+
+[envs.hatch-check-types]
+template = "types"
+[envs.hatch-check-types.scripts]
 check = "mypy {args:src/pycli_mcp tests}"
 
 [envs.docs]
