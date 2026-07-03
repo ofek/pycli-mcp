@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import logging
 import re
 import shutil
 from importlib import import_module
@@ -10,6 +11,16 @@ from typing import Any
 import click
 
 from pycli_mcp import CommandMCPServer, CommandQuery
+
+
+def configure_project_logging(log_level: str | None, log_config: str | None) -> None:
+    if log_config is not None or log_level is None:
+        return
+
+    level_name = "DEBUG" if log_level.upper() == "TRACE" else log_level.upper()
+    if (level := getattr(logging, level_name, None)) is not None:
+        logging.basicConfig(level=level)
+        logging.getLogger("pycli_mcp").setLevel(level)
 
 
 def parse_target_option(specs: dict[str, Any], raw_value: str) -> tuple[str, str]:
@@ -207,6 +218,7 @@ def pycli_mcp(
     for key, value in options:
         server_settings.setdefault(key, value)
 
+    configure_project_logging(log_level, log_config)
     server.run(**server_settings)
 
 

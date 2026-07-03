@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import subprocess
 from contextlib import asynccontextmanager
@@ -26,12 +27,28 @@ from starlette.routing import Mount
 
 from pycli_mcp.metadata.query import CommandQuery
 
+logger = logging.getLogger(__name__)
+
+TOOL_NAME_ENV_VAR = "PYCLI_MCP_TOOL_NAME"
+USER_AGENT_ENV_VAR = "PYCLI_MCP_USER_AGENT"
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
 
     from mcp.server.streamable_http import EventStore
 
     from pycli_mcp.metadata.interface import CommandMetadata
+
+
+def get_http_user_agent(request: Any | None) -> str | None:
+    if request is None:
+        return None
+
+    return request.headers.get("user-agent")
+
+
+def log_http_user_agent(method: str, user_agent: str | None) -> None:
+    logger.debug("HTTP User-Agent for MCP method `%s`: %r", method, user_agent)
 
 
 class Command:
@@ -171,6 +188,7 @@ class CommandMCPServer:
         Returns:
             The available MCP tools.
         """
+        log_http_user_agent("tools/list", get_http_user_agent(self.server.request_context.request))
         return ServerResult(ListToolsResult(tools=self.list_command_tools()))
 
     async def call_tool_handler(self, req: CallToolRequest) -> ServerResult:
@@ -182,7 +200,12 @@ class CommandMCPServer:
         """
         command = self.commands[req.params.name].metadata.construct(req.params.arguments)
         env_vars = dict(os.environ)
-        env_vars["PYCLI_MCP_TOOL_NAME"] = req.params.name
+        env_vars[TOOL_NAME_ENV_VAR] = req.params.name
+        user_agent = get_http_user_agent(self.server.request_context.request)
+        log_http_user_agent("tools/call", user_agent)
+        env_vars.pop(USER_AGENT_ENV_VAR, None)
+        if user_agent is not None:
+            env_vars[USER_AGENT_ENV_VAR] = user_agent
 
         try:
             process = await asyncio.to_thread(
