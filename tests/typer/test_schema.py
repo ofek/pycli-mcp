@@ -224,7 +224,7 @@ def test_path() -> None:
     def cli(*, foo: Path | None = typer.Option(None, help="foo help")) -> None:
         pass
 
-    commands = list(walk_commands(get_command(app), aggregate="none"))
+    commands = list(walk_commands(get_command(app), aggregate="none", strict_types=True))
     assert len(commands) == 1, commands
 
     metadata = commands[0]

@@ -55,6 +55,9 @@ def get_typer_type_data(click_type: Any) -> dict[str, Any]:
         return {"param_type": "Tuple", "name": "tuple"}
 
     type_name = type(click_type).__name__.removesuffix("ParamType").removesuffix("ParameterType")
+    if type_name == "TyperPath":
+        type_name = "Path"
+
     type_data = {
         "param_type": type_name,
         "name": getattr(click_type, "name", type_name.lower()),
