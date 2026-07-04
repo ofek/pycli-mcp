@@ -11,9 +11,11 @@ requires-python = ">=3.10"
 license = "MIT"
 keywords = [
   "ai",
+  "argparse",
   "cli",
   "click",
   "mcp",
+  "typer",
 ]
 authors = [
   { name = "Ofek Lev", email = "oss@ofek.dev" },
@@ -31,7 +33,7 @@ classifiers = [
 ]
 dependencies = [
   "click",
-  "mcp",
+  "mcp<2",
 ]
 
 [project.urls]
