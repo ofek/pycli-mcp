@@ -164,11 +164,19 @@ def pycli_mcp(
 
     for include_entry in includes:
         target_spec, include_pattern = parse_target_option(command_specs, include_entry)
-        command_specs[target_spec]["include"] = re.compile(include_pattern)
+        try:
+            command_specs[target_spec]["include"] = re.compile(include_pattern)
+        except re.error as err:
+            msg = f"Invalid include pattern for spec `{target_spec}`: {include_pattern!r} ({err})"
+            raise ValueError(msg) from err
 
     for exclude_entry in excludes:
         target_spec, exclude_pattern = parse_target_option(command_specs, exclude_entry)
-        command_specs[target_spec]["exclude"] = re.compile(exclude_pattern)
+        try:
+            command_specs[target_spec]["exclude"] = re.compile(exclude_pattern)
+        except re.error as err:
+            msg = f"Invalid exclude pattern for spec `{target_spec}`: {exclude_pattern!r} ({err})"
+            raise ValueError(msg) from err
 
     command_queries: list[CommandQuery] = []
     spec_pattern = re.compile(r"^(?P<spec>(?P<module>[\w.]+):(?P<attr>[\w.]+))$")
